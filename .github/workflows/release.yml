@@ -1,0 +1,48 @@
+name: Publicar versión
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: fuente/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: fuente
+        run: npm ci
+
+      - name: Probar y compilar
+        working-directory: fuente
+        run: npm run check
+
+      - name: Preparar paquete de Windows
+        run: |
+          mkdir -p release/Chaty-Reader
+          cp -R app interno release/Chaty-Reader/
+          cp INSTALAR-AQUI.cmd LEEME.txt LICENSE NOTICE.md release/Chaty-Reader/
+          cd release
+          zip -r "Chaty-Reader-Windows-${GITHUB_REF_NAME}.zip" Chaty-Reader
+
+      - name: Crear versión de GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "${GITHUB_REF_NAME}"
+          "release/Chaty-Reader-Windows-${GITHUB_REF_NAME}.zip"
+          --generate-notes
+          --title "Chaty Reader ${GITHUB_REF_NAME}"

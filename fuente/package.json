@@ -1,0 +1,25 @@
+{
+  "name": "chaty-reader",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "Lector local y privado de exportaciones conversacionales.",
+  "author": "Samira Tyr",
+  "license": "GPL-3.0-only",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test",
+    "check": "node build.mjs && node --test"
+  },
+  "dependencies": {
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.8",
+    "jsdom": "26.1.0"
+  }
+}

@@ -1,0 +1,18 @@
+# Dependencias y resultados locales
+fuente/node_modules/
+coverage/
+*.log
+
+# La aplicación compilada se genera en CI y para las versiones publicadas
+app/assets/
+
+# Paquetes de distribución
+*.zip
+*.7z
+
+# Archivos del sistema y editores
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/

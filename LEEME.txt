@@ -1,0 +1,76 @@
+CHATY READER · AI MEMORY DECODER
+===============================
+
+Chaty Reader convierte exportaciones JSON difíciles de leer en chats claros,
+ordenados y navegables. Todo el procesamiento ocurre en tu dispositivo.
+
+Instalación en Windows
+----------------------
+1. Extrae completamente este archivo ZIP.
+2. Abre la carpeta extraída.
+3. Haz doble clic en INSTALAR-AQUI.cmd.
+4. Encontrarás Chaty Reader en el escritorio y en el menú Inicio.
+
+Uso
+---
+1. Abre Chaty Reader y pulsa "Abrir conversaciones".
+2. Elige conversations.json. Si la exportación está dividida, selecciona
+   juntos conversations-000.json, conversations-001.json y los demás trozos.
+3. Chaty detectará el formato, unirá los fragmentos y ordenará los chats.
+4. Busca títulos, frases, nombres o fechas. También puedes limitar los
+   resultados con "Desde" y "Hasta".
+5. Cuando la exportación lo incluya, Chaty muestra el modelo registrado en cada
+   respuesta. También puedes buscarlo o elegirlo en el filtro "Modelo".
+6. Copia un mensaje, copia el chat completo o guárdalo como archivo .txt.
+7. Las conversaciones grandes se muestran de 120 en 120 mensajes para evitar
+   que la ventana se bloquee.
+
+Compatibilidad
+--------------
+Esta es la edición GPT de Chaty Reader y reconoce exportaciones de ChatGPT.
+Otras plataformas, si se desarrollan, tendrán ediciones independientes para
+mantener esta aplicación sencilla y evitar mezclar formatos incompatibles.
+
+Fechas reales
+-------------
+La fecha de cada mensaje se obtiene de la exportación y se convierte a la zona
+horaria de tu ordenador. Si un mensaje no incluye fecha, Chaty no la inventa.
+Para fechar un recuerdo concreto, usa la hora mostrada junto a ese mensaje.
+
+Modelos registrados
+--------------------
+ChatGPT puede guardar el identificador del modelo en metadata.model_slug. Ese
+dato pertenece a cada respuesta, no necesariamente a la conversación entera.
+Chaty lo muestra tal como aparece en la exportación, resume los modelos del chat
+y permite filtrarlos. Si el dato falta, indica "Modelo no indicado" y no intenta
+adivinarlo.
+
+Temas
+-----
+Puedes elegir Azul profundo, Marfil o Steampunk. Chaty solo guarda en el
+navegador local el tema elegido; no conserva el nombre del archivo ni una base
+de datos con tus conversaciones.
+
+Privacidad
+----------
+No necesita API, agente de IA, cuenta, GPU ni conexión a internet. Los JSON se
+leen directamente desde la ubicación elegida. No se suben, no se envían y no
+se modifican.
+
+Principio
+---------
+Chaty ordena los recuerdos. Tú decides cuáles tienen corazón.
+
+Desinstalación
+--------------
+Busca "Desinstalar Chaty Reader" en el menú Inicio.
+
+Requisitos
+----------
+Windows 10 u 11 con Microsoft Edge. Edge se usa únicamente como motor de la
+ventana local; Chaty Reader no abre ninguna página de internet.
+
+Autoría
+-------
+Proyecto concebido y dirigido por Samira Tyr, creado en colaboración con
+S.A. Verbo.

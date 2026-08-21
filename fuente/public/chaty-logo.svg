@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title description">
+  <title id="title">Chaty Reader</title>
+  <description id="description">Cabeza de lobo azul junto a una media luna dorada.</description>
+  <defs>
+    <linearGradient id="blue" x1="22" y1="18" x2="90" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#66d9d4"/>
+      <stop offset=".5" stop-color="#176e91"/>
+      <stop offset="1" stop-color="#0b3554"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="90" y1="15" x2="113" y2="77" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffe2a0"/>
+      <stop offset=".52" stop-color="#d5a354"/>
+      <stop offset="1" stop-color="#9b672a"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#gold)" d="M109 14c-8 2-14 10-14 19 0 12 9 21 20 22-4 5-11 8-18 8-15 0-27-12-27-27 0-13 9-24 21-27 7-2 14 0 18 5Z"/>
+  <path fill="url(#blue)" stroke="#9be8df" stroke-opacity=".5" stroke-width="2" stroke-linejoin="round" d="m27 18 27 20 25-20 4 31 15 21-16 38-28 14-29-14L10 70l14-21 3-31Z"/>
+  <path fill="#071a2a" fill-opacity=".86" d="m30 48 18 9-12 8-16-2 10-15Zm47 0-18 9 12 8 16-2-10-15Z"/>
+  <path fill="#e9bf6f" d="m54 74 11 5-11 9-11-9 11-5Z"/>
+  <path fill="#d9f8f5" d="m35 56 8 3-7 3-5-2 4-4Zm38 0-8 3 7 3 5-2-4-4Z"/>
+  <path fill="none" stroke="#8bcfc9" stroke-width="3" stroke-linecap="round" d="m54 88-1 15m1-7-13-3m13 3 13-3"/>
+  <circle cx="104" cy="79" r="3" fill="#e8bd70"/>
+  <circle cx="113" cy="70" r="1.7" fill="#e8bd70"/>
+</svg>
