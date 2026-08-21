@@ -2,8 +2,9 @@ name: Publicar versión
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,7 +16,21 @@ jobs:
       - name: Descargar el código
         uses: actions/checkout@v4
 
+      - name: Resolver la versión
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v$(node -p "require('./fuente/package.json').version")"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Preparar Node.js
+        if: steps.version.outputs.exists != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -23,26 +38,31 @@ jobs:
           cache-dependency-path: fuente/package-lock.json
 
       - name: Instalar dependencias
+        if: steps.version.outputs.exists != 'true'
         working-directory: fuente
         run: npm ci
 
       - name: Probar y compilar
+        if: steps.version.outputs.exists != 'true'
         working-directory: fuente
         run: npm run check
 
       - name: Preparar paquete de Windows
+        if: steps.version.outputs.exists != 'true'
         run: |
           mkdir -p release/Chaty-Reader
           cp -R app interno release/Chaty-Reader/
           cp INSTALAR-AQUI.cmd LEEME.txt LICENSE NOTICE.md release/Chaty-Reader/
           cd release
-          zip -r "Chaty-Reader-Windows-${GITHUB_REF_NAME}.zip" Chaty-Reader
+          zip -r "Chaty-Reader-Windows.zip" Chaty-Reader
 
       - name: Crear versión de GitHub
+        if: steps.version.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
-          gh release create "${GITHUB_REF_NAME}"
-          "release/Chaty-Reader-Windows-${GITHUB_REF_NAME}.zip"
+          gh release create "${{ steps.version.outputs.tag }}"
+          "release/Chaty-Reader-Windows.zip"
+          --target "${GITHUB_SHA}"
           --generate-notes
-          --title "Chaty Reader ${GITHUB_REF_NAME}"
+          --title "Chaty Reader ${{ steps.version.outputs.tag }}"

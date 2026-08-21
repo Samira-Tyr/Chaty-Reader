@@ -8,6 +8,13 @@ dispositivo: no necesita cuenta, API, GPU ni conexión a internet.
 
 > **Chaty ordena los recuerdos. Tú decides cuáles tienen corazón.**
 
+## Descargar
+
+### [⬇ Descargar Chaty Reader para Windows](https://github.com/Samira-Tyr/Chaty-Reader/releases/latest/download/Chaty-Reader-Windows.zip)
+
+La descarga incluye la aplicación compilada y el instalador local. No requiere
+cuenta, API ni conexión a internet para funcionar.
+
 ## Qué hace
 
 - Abre uno o varios archivos `conversations*.json` de una exportación.
@@ -60,9 +67,10 @@ Para una comprobación completa:
 npm run check
 ```
 
-Los recursos compilados no se guardan en el repositorio. Cada etiqueta `v*`
-activa el flujo de publicación, ejecuta las pruebas y adjunta automáticamente el
-ZIP instalable de Windows a una nueva versión de GitHub.
+Los recursos compilados no se guardan en el repositorio. Cuando cambia la
+versión de `fuente/package.json`, el flujo de publicación ejecuta las pruebas y
+adjunta automáticamente el ZIP instalable de Windows a una nueva versión de
+GitHub.
 
 ## Estructura
 
