@@ -15,6 +15,7 @@ y el proyecto utiliza versionado semántico.
 - Eliminada la persistencia innecesaria del nombre del último archivo abierto.
 - Publicación bajo la licencia GNU GPL v3.0.
 - Generación automática del ZIP de Windows al publicar una etiqueta de versión.
+- Enlace estable de descarga y publicación automática de la versión declarada.
 
 ## [0.3.0] - 2026-08-21
 
