@@ -13,17 +13,30 @@ Instalación en Windows
 
 Uso
 ---
-1. Abre Chaty Reader y pulsa "Abrir conversaciones".
-2. Elige conversations.json. Si la exportación está dividida, selecciona
-   juntos conversations-000.json, conversations-001.json y los demás trozos.
+1. Abre Chaty Reader y pulsa "Abrir exportación". Elige la carpeta extraída
+   que contiene los JSON y los archivos de imagen.
+2. Para abrir archivos JSON sueltos, pulsa "Abrir JSON". Selecciona juntos
+   todos los trozos conversations-000.json, conversations-001.json y demás.
 3. Chaty detectará el formato, unirá los fragmentos y ordenará los chats.
 4. Busca títulos, frases, nombres o fechas. También puedes limitar los
    resultados con "Desde" y "Hasta".
 5. Cuando la exportación lo incluya, Chaty muestra el modelo registrado en cada
    respuesta. También puedes buscarlo o elegirlo en el filtro "Modelo".
+   Puedes elegir toda la familia GPT-6 o filtrar GPT-6.2 Sol y Astra por
+   separado. Cada opción de 6.2 indica si hay respuestas de ese modelo.
 6. Copia un mensaje, copia el chat completo o guárdalo como archivo .txt.
 7. Las conversaciones grandes se muestran de 120 en 120 mensajes para evitar
    que la ventana se bloquee.
+
+Imágenes en los chats
+---------------------
+Pulsa "Abrir exportación" y elige la carpeta ya extraída. Chaty lee los JSON y
+vincula las imágenes disponibles, incluidos los archivos .dat de la exportación.
+
+Si ya tienes los chats abiertos, pulsa "Vincular carpeta" en la sección
+Imágenes. Chaty mantiene el chat y la búsqueda abiertos. Para asociar las
+imágenes generadas, la carpeta debe incluir el índice library_files.json.
+Si falta el archivo de una imagen, Chaty conserva su referencia.
 
 Compatibilidad
 --------------

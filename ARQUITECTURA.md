@@ -34,6 +34,13 @@ Cada mensaje contiene:
 - `createdAt`.
 - `contentType`.
 - `model`: objeto opcional con `id`, `label` y `source`.
+- `images`: referencias opcionales con el identificador y nombre del archivo.
+
+El adaptador lee los punteros de imagen, los adjuntos y los índices
+`conversation_asset_file_names.json` y `library_files.json`. Vincula las
+imágenes generadas al mensaje de origen si aparece en el chat. Si el mensaje
+no figura en la exportación, coloca la imagen en el chat en la fecha registrada.
+La interfaz enlaza las referencias con los archivos locales seleccionados.
 
 ## Mantener el adaptador GPT
 
@@ -48,6 +55,12 @@ forma, `metadata.model_slug` se transforma en el campo común `message.model`.
 Esta edición está sellada para ChatGPT. Los formatos de otras plataformas no se
 registran aquí; deben vivir en ediciones separadas que reutilicen el contrato
 común sin convertir esta interfaz en un registro universal de exportaciones.
+
+## Filtros de GPT-6
+
+`fuente/src/model/models.js` reúne las versiones de GPT-6 en un filtro de
+familia y reconoce GPT-6.2 Sol y Astra por separado, con sus variantes de Work.
+Cada mensaje conserva el identificador registrado en la exportación.
 
 ## Compilar
 

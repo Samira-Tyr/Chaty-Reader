@@ -1,9 +1,14 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import workerSource from "virtual:chaty-worker";
 import { modelsFromMessages } from "../model/schema.js";
+import { modelFilterOptions } from "../model/models.js";
+import { isImageMetadataFile } from "../model/images.js";
+import { buildLocalImageIndex, countImageLinks, isLocalImageFile, mergeSelectedFiles } from "./local-images.js";
+import { MessageImages } from "./MessageImages.jsx";
 import { searchConversations } from "./search.js";
 
 const PAGE_SIZE = 120;
+const EXPORT_CONVERSATIONS = /^conversations(?:[-_]\d+)?(?:\s*\(\d+\))?\.json$/i;
 const THEME_OPTIONS = [
   { id: "deep-blue", label: "Azul profundo" },
   { id: "ivory", label: "Marfil" },
@@ -12,6 +17,7 @@ const THEME_OPTIONS = [
 
 export function App() {
   const [conversations, setConversations] = useState([]);
+  const [imageFiles, setImageFiles] = useState([]);
   const [platforms, setPlatforms] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [query, setQuery] = useState("");
@@ -30,7 +36,11 @@ export function App() {
   const [theme, setTheme] = useState(() => safeStoredTheme());
 
   const fileInputRef = useRef(null);
+  const folderInputRef = useRef(null);
+  const imageFolderInputRef = useRef(null);
   const workerRef = useRef(null);
+  const pendingImport = useRef(null);
+  const activeExport = useRef(null);
   const readerRef = useRef(null);
   const listRef = useRef(null);
 
@@ -46,6 +56,9 @@ export function App() {
     workerRef.current = worker;
 
     worker.onmessage = (event) => {
+      const request = pendingImport.current;
+      if (!request) return;
+      pendingImport.current = null;
       setLoading(false);
       setLoadingText("");
       if (!event.data.ok) {
@@ -55,30 +68,58 @@ export function App() {
 
       const document = event.data.document;
       const loaded = document.conversations || [];
+      if (!loaded.length) {
+        setError("No encontré conversaciones visibles en estos archivos.");
+        return;
+      }
+      activeExport.current = { files: request.files, imageMetadata: request.imageMetadata, summary: request.summary };
+      setImageFiles(request.images);
       setConversations(loaded);
       setPlatforms(document.platforms || []);
+      setError("");
+      if (request.keepView) return;
+
+      setFileSummary(request.summary);
+      setQuery("");
+      setDateFrom("");
+      setDateTo("");
+      setModelFilter("");
       setSelectedId(loaded[0]?.id ?? null);
       setPage({ conversationId: loaded[0]?.id ?? null, limit: PAGE_SIZE });
-      setError(loaded.length ? "" : "No encontré conversaciones visibles en estos archivos.");
       window.setTimeout(() => readerRef.current?.scrollTo({ top: 0 }), 0);
+    };
+
+    worker.onerror = () => {
+      pendingImport.current = null;
+      setLoading(false);
+      setLoadingText("");
+      setError("Se interrumpió la lectura de la exportación. Puedes volver a abrirla.");
     };
 
     return () => {
       worker.terminate();
+      workerRef.current = null;
       URL.revokeObjectURL(url);
     };
   }, []);
 
-  const availableModels = useMemo(() => {
+  const imageIndex = useMemo(
+    () => buildLocalImageIndex(imageFiles, conversations),
+    [imageFiles, conversations],
+  );
+  const imageLinks = useMemo(() => countImageLinks(imageIndex, conversations), [imageIndex, conversations]);
+
+  const modelOptions = useMemo(() => {
     const unique = new Map();
     for (const conversation of conversations) {
       for (const model of conversationModels(conversation)) {
         if (!unique.has(model.id)) unique.set(model.id, model);
       }
     }
-    return Array.from(unique.values()).sort((left, right) =>
+    const models = Array.from(unique.values()).sort((left, right) =>
       left.label.localeCompare(right.label, "es"),
     );
+    return modelFilterOptions(models);
   }, [conversations]);
 
   const results = useMemo(
@@ -108,31 +149,72 @@ export function App() {
     0,
   );
 
-  function openFiles(incomingFiles) {
-    const files = Array.from(incomingFiles || [])
-      .filter((file) => file.name.toLocaleLowerCase().endsWith(".json"))
+  function openFiles(incomingFiles, fromFolder = false) {
+    if (pendingImport.current) return;
+    const selectedFiles = Array.from(incomingFiles || []);
+    const images = selectedFiles.filter(isLocalImageFile);
+    const imageMetadata = selectedFiles.filter(isImageMetadataFile);
+    const files = selectedFiles
+      .filter((file) => fromFolder
+        ? EXPORT_CONVERSATIONS.test(file.name)
+        : /\.json$/i.test(file.name) && !isImageMetadataFile(file))
       .sort((left, right) => left.name.localeCompare(right.name));
 
     if (!files.length) {
-      setError("Elige uno o varios archivos JSON de una exportación compatible.");
+      if (activeExport.current && (images.length || imageMetadata.length)) {
+        linkImages(images, imageMetadata);
+        return;
+      }
+      setError("Abre los archivos conversations.json de tu exportación o elige la carpeta que los contiene.");
       return;
     }
 
-    setError("");
-    setQuery("");
-    setDateFrom("");
-    setDateTo("");
-    setModelFilter("");
-    setPage({ conversationId: null, limit: PAGE_SIZE });
-    setLoading(true);
-    setLoadingText(
+    const summary = files.length === 1 ? files[0].name : `${files.length} archivos JSON`;
+    startImport(
+      { files, images, imageMetadata, summary },
       files.length === 1
         ? "Detectando, leyendo y ordenando la exportación…"
         : `Detectando y uniendo ${files.length} archivos…`,
     );
-    const summary = files.length === 1 ? files[0].name : `${files.length} archivos JSON`;
-    setFileSummary(summary);
-    workerRef.current?.postMessage({ files });
+  }
+
+  function linkImages(images, imageMetadata) {
+    const current = activeExport.current;
+    if (!current || pendingImport.current) return;
+    if (!images.length && !imageMetadata.length) {
+      setError("Elige la carpeta descomprimida donde están las imágenes de la exportación.");
+      return;
+    }
+
+    if (!imageMetadata.length) {
+      setImageFiles((previous) => mergeSelectedFiles(previous, images));
+      setError("");
+      return;
+    }
+
+    startImport({
+      ...current,
+      images: mergeSelectedFiles(imageFiles, images),
+      imageMetadata: mergeSelectedFiles(current.imageMetadata, imageMetadata),
+      keepView: true,
+    }, "Vinculando las imágenes a sus conversaciones…");
+  }
+
+  function startImport(request, description) {
+    const worker = workerRef.current;
+    if (!worker || pendingImport.current) return;
+    pendingImport.current = request;
+    setError("");
+    setLoading(true);
+    setLoadingText(description);
+    try {
+      worker.postMessage({ files: request.files, imageMetadata: request.imageMetadata });
+    } catch {
+      pendingImport.current = null;
+      setLoading(false);
+      setLoadingText("");
+      setError("No pude abrir los archivos seleccionados. Vuelve a elegirlos.");
+    }
   }
 
   function selectConversation(result) {
@@ -200,6 +282,29 @@ export function App() {
           event.target.value = "";
         }}
       />
+      <input
+        ref={folderInputRef}
+        className="sr-only"
+        type="file"
+        webkitdirectory=""
+        aria-label="Carpeta de la exportación completa"
+        onChange={(event) => {
+          openFiles(event.target.files, true);
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={imageFolderInputRef}
+        className="sr-only"
+        type="file"
+        webkitdirectory=""
+        aria-label="Carpeta para vincular imágenes"
+        onChange={(event) => {
+          const files = Array.from(event.target.files || []);
+          linkImages(files.filter(isLocalImageFile), files.filter(isImageMetadataFile));
+          event.target.value = "";
+        }}
+      />
 
       <header className="topbar">
         <div className="brand">
@@ -224,9 +329,22 @@ export function App() {
               ))}
             </select>
           </label>
-          <button className="primary-button" onClick={() => fileInputRef.current?.click()}>
+          <button
+            className="folder-button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading}
+            title="Elegir archivos JSON sueltos"
+          >
+            Abrir JSON
+          </button>
+          <button
+            className="primary-button"
+            aria-label="Abrir exportación completa"
+            onClick={() => folderInputRef.current?.click()}
+            disabled={loading}
+          >
             <span aria-hidden="true">＋</span>
-            {conversations.length ? "Cambiar archivos" : "Abrir conversaciones"}
+            Abrir exportación
           </button>
         </div>
       </header>
@@ -248,6 +366,20 @@ export function App() {
                 </span>
               </div>
               <span className="platform-badge">{platforms.map(platformLabel).join(" + ")}</span>
+            </div>
+            {error && <div className="error-message import-error" role="alert">{error}</div>}
+            <div className="image-source">
+              <div role="status">
+                <strong>Imágenes</strong>
+                <small>
+                  {imageFiles.length
+                    ? `${imageLinks.located.toLocaleString("es-ES")} de ${imageLinks.total.toLocaleString("es-ES")} localizadas`
+                    : "Vincula la carpeta de la exportación."}
+                </small>
+              </div>
+              <button className="folder-button" onClick={() => imageFolderInputRef.current?.click()} disabled={loading}>
+                Vincular carpeta
+              </button>
             </div>
 
             <label className="search-box">
@@ -300,12 +432,11 @@ export function App() {
                     setPage({ conversationId: null, limit: PAGE_SIZE });
                     resetListScroll();
                   }}
-                  disabled={!availableModels.length}
                 >
                   <option value="">Todos los modelos</option>
-                  {availableModels.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.label}
+                  {modelOptions.map((option) => (
+                    <option key={option.id} value={option.id} disabled={option.unavailable}>
+                      {option.label}{option.unavailable ? " · sin registros" : ""}
                     </option>
                   ))}
                 </select>
@@ -501,11 +632,12 @@ export function App() {
                                 {formatExactDate(message.createdAt)}
                               </time>
                             )}
-                            <button onClick={() => copyText(message.text, message.id)}>
+                            <button onClick={() => copyText(messageAsText(message), message.id)}>
                               {copiedId === message.id ? "Copiado" : "Copiar"}
                             </button>
                           </div>
-                          <div className="message-text">{message.text}</div>
+                          {message.text && <div className="message-text">{message.text}</div>}
+                          {!!message.images?.length && <MessageImages images={message.images} index={imageIndex} />}
                         </div>
                       </article>
                     );
@@ -546,17 +678,16 @@ export function App() {
           <p className="eyebrow">Tus conversaciones, legibles otra vez</p>
           <h2>Abre una exportación y encuentra el recuerdo que buscas.</h2>
           <p className="welcome-copy">
-            Suelta aquí uno o varios archivos <strong>JSON</strong>. Chaty detecta el formato,
-            separa los chats y los ordena sin subir nada fuera de tu dispositivo.
+            Elige la carpeta descomprimida de la exportación para leer los chats con sus imágenes.
           </p>
           <button
             className="hero-button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => folderInputRef.current?.click()}
             disabled={loading}
           >
-            {loading ? "Leyendo los archivos…" : "Elegir archivos JSON"}
+            {loading ? "Leyendo los archivos…" : "Elegir carpeta de exportación"}
           </button>
-          <p className="drop-hint">También puedes arrastrarlos a esta ventana</p>
+          <p className="drop-hint">También puedes abrir o arrastrar archivos JSON e imágenes.</p>
           {loadingText && (
             <div className="loading-line">
               <span /> {loadingText}
@@ -618,10 +749,15 @@ function conversationAsText(conversation, separator = "\n\n") {
     .map(
       (message) => {
         const model = message.model ? ` · ${message.model.label}` : "";
-        return `${message.authorLabel}${model} · ${formatExactDate(message.createdAt)}\n${message.text}`;
+        return `${message.authorLabel}${model} · ${formatExactDate(message.createdAt)}\n${messageAsText(message)}`;
       },
     )
     .join(separator);
+}
+
+function messageAsText(message) {
+  const images = (message.images ?? []).map((image) => image.name ? `[Imagen: ${image.name}]` : "[Imagen]");
+  return [message.text, ...images].filter(Boolean).join("\n");
 }
 
 function conversationModels(conversation) {

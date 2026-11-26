@@ -17,6 +17,21 @@ y el proyecto utiliza versionado semántico.
 - Generación automática del ZIP de Windows al publicar una etiqueta de versión.
 - Enlace estable de descarga y publicación automática de la versión declarada.
 
+## [0.4.2] - 2026-11-26
+
+### Añadido
+
+- Apertura de carpetas de exportación completas con sus imágenes.
+- Imágenes adjuntas en el mensaje original e imágenes generadas en su chat.
+- Vinculación de carpetas de imágenes tras la carga de los chats, con recuento de referencias localizadas.
+- Filtro para la familia GPT-6 y filtros independientes para GPT-6.2 Sol y Astra,
+  incluidas sus variantes de Work.
+
+### Mejorado
+
+- Se conserva el chat y la búsqueda al añadir imágenes después de abrir los JSON.
+- Los filtros de GPT-6.2 indican cuándo el archivo abierto carece de registros de ese modelo.
+
 ## [0.3.0] - 2026-08-21
 
 ### Añadido
