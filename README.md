@@ -17,13 +17,17 @@ cuenta, API ni conexión a internet para funcionar.
 
 ## Qué hace
 
-- Abre uno o varios archivos `conversations*.json` de una exportación.
+- Abre la carpeta de una exportación completa o uno o varios archivos `conversations*.json`.
 - Detecta, une y elimina duplicados entre fragmentos.
 - Reconstruye la rama activa de cada conversación.
+- Muestra las imágenes adjuntas en su mensaje y las generadas en su conversación
+  cuando la exportación contiene sus archivos.
+- Vincula una carpeta de imágenes a conversaciones ya abiertas y conserva la búsqueda actual.
 - Ordena y filtra los chats por fecha.
 - Busca títulos, frases, fechas y modelos registrados.
 - Muestra el modelo asociado a cada respuesta cuando la exportación incluye
   `metadata.model_slug`.
+- Incluye filtros para toda la familia GPT-6 y para GPT-6.2 Sol y Astra por separado.
 - Permite copiar mensajes o conversaciones y guardarlas como `.txt`.
 - Ofrece los temas Azul profundo, Marfil y Steampunk.
 - Mantiene todo el procesamiento dentro del navegador local.
@@ -56,8 +60,8 @@ Requisitos: Node.js 20 o posterior.
 ```bash
 cd fuente
 npm ci
-npm test
 npm run build
+npm test
 ```
 
 La compilación genera desde cero los recursos autocontenidos de `app/assets/`.
@@ -91,19 +95,9 @@ evitar acoplamientos y conservar la sencillez.
 
 La aplicación utiliza únicamente los datos presentes en la exportación. No
 adivina modelos ausentes, no resume conversaciones y no clasifica recuerdos.
-Los adjuntos que no contienen texto legible se representan como marcadores.
+Si falta un archivo de imagen, Chaty conserva su referencia en la conversación.
 
 ## Autoría
 
 Proyecto concebido y dirigido por **Samira Tyr**, creado en colaboración con
 **S.A. Verbo**.
-
-Chaty Reader es un proyecto independiente y no está afiliado, patrocinado ni
-respaldado por OpenAI. ChatGPT es una marca de su respectivo titular.
-
-## Licencia
-
-Chaty Reader se publica bajo la licencia
-[GNU General Public License v3.0](LICENSE). Puedes usarlo, estudiarlo,
-modificarlo y redistribuirlo bajo sus condiciones. Las versiones derivadas que
-se distribuyan deben conservar la misma libertad y ofrecer su código fuente.

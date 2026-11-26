@@ -35,6 +35,7 @@ export function normalizedMessage({
   createdAt = null,
   contentType = "text",
   model = null,
+  images = [],
 }) {
   return {
     id: String(id),
@@ -44,6 +45,7 @@ export function normalizedMessage({
     createdAt: finiteTimestamp(createdAt),
     contentType: String(contentType || "text"),
     model: normalizedModel(model),
+    ...(images.length ? { images } : {}),
   };
 }
 

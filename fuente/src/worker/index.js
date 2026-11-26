@@ -1,9 +1,10 @@
 import { detectAdapter } from "../adapters/registry.js";
-import { INTERNAL_SCHEMA_VERSION } from "../model/schema.js";
+import { INTERNAL_SCHEMA_VERSION, normalizeForSearch } from "../model/schema.js";
 
 if (typeof self !== "undefined") self.onmessage = async (event) => {
   try {
-    self.postMessage({ ok: true, document: await parseConversationFiles(event.data.files) });
+    const { files, imageMetadata = [] } = event.data;
+    self.postMessage({ ok: true, document: await parseConversationFiles(files, imageMetadata) });
   } catch (error) {
     self.postMessage({
       ok: false,
@@ -12,17 +13,18 @@ if (typeof self !== "undefined") self.onmessage = async (event) => {
   }
 };
 
-export async function parseConversationFiles(incomingFiles) {
+export async function parseConversationFiles(incomingFiles, imageMetadata = []) {
   const files = Array.from(incomingFiles || []);
   if (!files.length) throw new Error("No recibí ningún archivo de conversaciones.");
 
   const unique = new Map();
   const detectedPlatforms = new Set();
+  const metadataByPlatform = new Map();
 
   for (const file of files) {
     let raw;
     try {
-      raw = JSON.parse(await file.text());
+      raw = JSON.parse((await file.text()).replace(/^\uFEFF/, ""));
     } catch {
       throw new Error(`${file.name} no es un archivo JSON válido.`);
     }
@@ -36,10 +38,17 @@ export async function parseConversationFiles(incomingFiles) {
     }
 
     detectedPlatforms.add(adapter.id);
+    if (!metadataByPlatform.has(adapter.id)) {
+      metadataByPlatform.set(adapter.id, await adapter.readImageMetadata?.(imageMetadata));
+    }
+    const metadata = metadataByPlatform.get(adapter.id);
     const source = adapter.extract(raw);
     source.forEach((conversation, index) => {
-      const normalized = adapter.normalize(conversation, index);
+      const normalized = adapter.normalize(conversation, index, metadata);
       if (!normalized.messages.length) return;
+      normalized.searchable = normalizeForSearch(
+        `${normalized.title}\n${normalized.messages.map((message) => message.text).join("\n")}`,
+      );
       unique.set(normalized.id, normalized);
     });
   }

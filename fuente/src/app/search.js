@@ -1,4 +1,5 @@
 import { modelsFromMessages, normalizeForSearch } from "../model/schema.js";
+import { modelMatchesFilter, modelSearchTerms } from "../model/models.js";
 
 export function searchConversations(
   conversations,
@@ -13,7 +14,7 @@ export function searchConversations(
   const toBoundary = dateBoundary(to, true);
   const sorted = [...conversations]
     .filter((conversation) =>
-      modelFilter ? conversationModels(conversation).some((model) => model.id === modelFilter) : true,
+      modelFilter ? conversationModels(conversation).some((model) => modelMatchesFilter(model, modelFilter)) : true,
     )
     .sort((left, right) => {
       const delta = conversationTimestamp(left) - conversationTimestamp(right);
@@ -35,22 +36,22 @@ export function searchConversations(
 
   const words = query.split(/\s+/).filter(Boolean);
   const exactExists = sorted.some((conversation) => {
-    if (conversationTitleSearch(conversation).includes(query)) return true;
+    if (conversationTitleSearch(conversation, modelFilter).includes(query)) return true;
     return conversation.messages.some(
       (message) =>
-        (!modelFilter || message.model?.id === modelFilter) &&
+        modelMatchesFilter(message.model, modelFilter) &&
         messageSearchText(message).includes(query),
     );
   });
 
   return sorted
     .map((conversation) => {
-      const titleText = conversationTitleSearch(conversation);
+      const titleText = conversationTitleSearch(conversation, modelFilter);
       const titleMatches = exactExists
         ? titleText.includes(query)
         : words.every((word) => titleText.includes(word));
       const matches = conversation.messages.filter((message) => {
-        if (modelFilter && message.model?.id !== modelFilter) return false;
+        if (!modelMatchesFilter(message.model, modelFilter)) return false;
         if (!inDateRange(message.createdAt, fromBoundary, toBoundary)) return false;
         const haystack = messageSearchText(message);
         return exactExists
@@ -77,13 +78,14 @@ export function searchConversations(
 
 export function messageSearchText(message) {
   return normalizeForSearch(
-    `${message.text}\n${searchableDate(message.createdAt)}\n${message.model?.id || ""}\n${message.model?.label || ""}`,
+    `${message.text}\n${searchableDate(message.createdAt)}\n${modelSearchTerms(message.model)}`,
   );
 }
 
-function conversationTitleSearch(conversation) {
+function conversationTitleSearch(conversation, modelFilter) {
   const models = conversationModels(conversation)
-    .flatMap((model) => [model.id, model.label])
+    .filter((model) => modelMatchesFilter(model, modelFilter))
+    .map(modelSearchTerms)
     .join("\n");
   return normalizeForSearch(`${conversation.title}\n${searchableDate(conversation.createdAt)}\n${models}`);
 }

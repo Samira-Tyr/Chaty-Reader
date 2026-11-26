@@ -3,6 +3,12 @@ import {
   normalizedMessage,
   SUPPORTED_ROLES,
 } from "../model/schema.js";
+import {
+  addGeneratedImages,
+  isImagePart,
+  messageImages,
+  readChatGptImageMetadata,
+} from "./chatgpt-images.js";
 
 export const chatGptAdapter = {
   id: "chatgpt",
@@ -32,9 +38,15 @@ export const chatGptAdapter = {
     return source;
   },
 
-  normalize(conversation, index = 0) {
-    const messages = activeMessages(conversation || {});
+  readImageMetadata: readChatGptImageMetadata,
+
+  normalize(conversation, index = 0, metadata) {
     const sourceId = conversation?.id || conversation?.conversation_id || index;
+    const messages = addGeneratedImages(
+      activeMessages(conversation || {}, metadata?.assetNames),
+      metadata?.generatedByConversation?.get(String(sourceId)),
+      metadata?.assetNames,
+    );
 
     return normalizedConversation({
       id: `chatgpt:${sourceId}`,
@@ -53,12 +65,12 @@ export function sourceConversations(raw) {
   return null;
 }
 
-export function activeMessages(conversation) {
+export function activeMessages(conversation, assetNames) {
   const mapping = conversation?.mapping;
   if (!mapping || typeof mapping !== "object") {
     const direct = Array.isArray(conversation?.messages) ? conversation.messages : [];
     return direct
-      .map((message, index) => visibleMessage({ id: index, message }))
+      .map((message, index) => visibleMessage({ id: index, message }, assetNames))
       .filter(Boolean);
   }
 
@@ -81,7 +93,7 @@ export function activeMessages(conversation) {
   while (nodeId && mapping[nodeId] && !seen.has(nodeId)) {
     seen.add(nodeId);
     const node = mapping[nodeId];
-    const message = visibleMessage(node);
+    const message = visibleMessage(node, assetNames);
     if (message) reversed.push(message);
     nodeId = node.parent;
   }
@@ -89,30 +101,33 @@ export function activeMessages(conversation) {
   if (reversed.length) return reversed.reverse();
 
   return Object.values(mapping)
-    .map(visibleMessage)
+    .map((node) => visibleMessage(node, assetNames))
     .filter(Boolean)
     .sort((left, right) => (left.createdAt || 0) - (right.createdAt || 0));
 }
 
-export function visibleMessage(node) {
+export function visibleMessage(node, assetNames) {
   const message = node?.message;
   if (!message) return null;
   if (message.metadata?.is_visually_hidden_from_conversation) return null;
 
   const role = message.author?.role || "unknown";
-  if (!SUPPORTED_ROLES.has(role)) return null;
+  const isImageTool = role === "tool" && /^(dalle|image_gen)([._]|$)/i.test(message.author?.name ?? "");
+  if (!SUPPORTED_ROLES.has(role) && !isImageTool) return null;
 
-  const text = messageText(message);
-  if (!text) return null;
+  const images = messageImages(message, assetNames);
+  const text = isImageTool ? "" : messageText(message, false);
+  if (!text && !images.length) return null;
 
   return normalizedMessage({
     id: message.id || node.id || "mensaje-sin-id",
-    role,
-    authorLabel: role === "user" ? "Tú" : "ChatGPT",
+    role: isImageTool ? "image" : role,
+    authorLabel: isImageTool ? "Imagen generada" : role === "user" ? "Tú" : "ChatGPT",
     text,
     createdAt: message.create_time,
     contentType: message.content?.content_type || "text",
     model: role === "assistant" ? exportedModel(message) : null,
+    images,
   });
 }
 
@@ -151,35 +166,36 @@ export function friendlyModelName(slug) {
   return id;
 }
 
-export function messageText(message) {
+export function messageText(message, includeImageMarkers = true) {
   const content = message?.content;
   if (!content) return "";
-  if (Array.isArray(content.parts)) return joinParts(content.parts);
+  if (Array.isArray(content.parts)) return joinParts(content.parts, includeImageMarkers);
   if (typeof content.text === "string") return content.text.trim();
-  if (Array.isArray(content.text)) return joinParts(content.text);
+  if (Array.isArray(content.text)) return joinParts(content.text, includeImageMarkers);
   if (typeof content.content === "string") return content.content.trim();
-  if (Array.isArray(content.content)) return joinParts(content.content);
+  if (Array.isArray(content.content)) return joinParts(content.content, includeImageMarkers);
   if (typeof content.transcript === "string") return content.transcript.trim();
   if (typeof content.result === "string") return content.result.trim();
   return "";
 }
 
-function joinParts(parts) {
-  return parts.map(partToText).filter(Boolean).join("\n").trim();
+function joinParts(parts, includeImageMarkers) {
+  return parts.map((part) => partToText(part, includeImageMarkers)).filter(Boolean).join("\n").trim();
 }
 
-function partToText(part) {
+function partToText(part, includeImageMarkers) {
   if (typeof part === "string") return part;
   if (part == null) return "";
   if (typeof part === "number" || typeof part === "boolean") return String(part);
   if (typeof part.text === "string") return part.text;
-  if (Array.isArray(part.text)) return joinParts(part.text);
+  if (Array.isArray(part.text)) return joinParts(part.text, includeImageMarkers);
   if (typeof part.content === "string") return part.content;
-  if (Array.isArray(part.content)) return joinParts(part.content);
+  if (Array.isArray(part.content)) return joinParts(part.content, includeImageMarkers);
   if (typeof part.transcript === "string") return part.transcript;
   if (typeof part.caption === "string") return part.caption;
-  if (Array.isArray(part.parts)) return joinParts(part.parts);
-  if (Array.isArray(part.children)) return joinParts(part.children);
+  if (Array.isArray(part.parts)) return joinParts(part.parts, includeImageMarkers);
+  if (Array.isArray(part.children)) return joinParts(part.children, includeImageMarkers);
+  if (isImagePart(part)) return includeImageMarkers ? "[Imagen]" : "";
   if (part.asset_pointer || part.image_url) return "[Imagen]";
   return "";
 }
